@@ -3,38 +3,76 @@ session_start();
 require_once 'conexion.php';
 
 $mensaje = '';
+$accion = $_GET['action'] ?? 'login';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $usuario = trim($_POST['usuario'] ?? '');
-    $password = trim($_POST['password'] ?? '');
+    $form_type = $_POST['form_type'] ?? 'login';
 
-    if (!empty($usuario) && !empty($password)) {
-        try {
-            $sql = "SELECT * FROM usuarios WHERE usuario = :usuario";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute(['usuario' => $usuario]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($form_type === 'login') {
+        $usuario = trim($_POST['usuario'] ?? '');
+        $password = trim($_POST['password'] ?? '');
 
-            if ($user && $user['password'] === $password) {
-                $token_sesion = uniqid('cyber_', true);
+        if (!empty($usuario) && !empty($password)) {
+            try {
+                $sql = "SELECT * FROM usuarios WHERE usuario = :usuario";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute(['usuario' => $usuario]);
+                $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-                $updateStmt = $pdo->prepare("UPDATE usuarios SET session_token = ? WHERE id = ?");
-                $updateStmt->execute([$token_sesion, $user['id']]);
+                if ($user && $user['password'] === $password) {
+                    $token_sesion = uniqid('cyber_', true);
 
-                $_SESSION['user_id'] = $user['id'];
-                $_SESSION['user_name'] = $user['usuario'];
-                $_SESSION['login_token'] = $token_sesion;
+                    $updateStmt = $pdo->prepare("UPDATE usuarios SET session_token = ? WHERE id = ?");
+                    $updateStmt->execute([$token_sesion, $user['id']]);
 
-                header("Location: views/home.php");
-                exit();
-            } else {
-                $mensaje = "Usuario o contraseña incorrectos.";
+                    $_SESSION['user_id'] = $user['id'];
+                    $_SESSION['user_name'] = $user['usuario'];
+                    $_SESSION['login_token'] = $token_sesion;
+
+                    header("Location: views/home.php");
+                    exit();
+                } else {
+                    $mensaje = "Usuario o contraseña incorrectos.";
+                }
+            } catch (PDOException $e) {
+                $mensaje = "Error en la base de datos: " . $e->getMessage();
             }
-        } catch (PDOException $e) {
-            $mensaje = "Error en la base de datos: " . $e->getMessage();
+        } else {
+            $mensaje = "Por favor, completa todos los campos.";
         }
-    } else {
-        $mensaje = "Por favor, completa todos los campos.";
+    } elseif ($form_type === 'register') {
+        $usuario = trim($_POST['usuario'] ?? '');
+        $password = trim($_POST['password'] ?? '');
+        $confirm_password = trim($_POST['confirm_password'] ?? '');
+
+        if (!empty($usuario) && !empty($password) && !empty($confirm_password)) {
+            if ($password === $confirm_password) {
+                try {
+                    $checkStmt = $pdo->prepare("SELECT id FROM usuarios WHERE usuario = :usuario");
+                    $checkStmt->execute(['usuario' => $usuario]);
+                    
+                    if ($checkStmt->rowCount() > 0) {
+                        $mensaje = "Ese nombre de usuario ya está en uso :(";
+                    } else {
+                        $sql = "INSERT INTO usuarios (usuario, password) VALUES (:usuario, :password)";
+                        $stmt = $pdo->prepare($sql);
+                        $stmt->execute([
+                            'usuario' => $usuario,
+                            'password' => $password
+                        ]);
+
+                        $mensaje = "¡Registro exitoso! Ya podés iniciar sesión ✨";
+                        $accion = 'login';
+                    }
+                } catch (PDOException $e) {
+                    $mensaje = "Error en la base de datos: " . $e->getMessage();
+                }
+            } else {
+                $mensaje = "Las contraseñas no coinciden :(";
+            }
+        } else {
+            $mensaje = "Por favor, completa todos los campos.";
+        }
     }
 }
 ?>
@@ -42,9 +80,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>CyberAngel.MP3 - Log In</title>
+    <title>CyberAngel.MP3 - Acceso</title>
     <link rel="icon" type="image/png" href="../img/logo.png">
-
     <link href="https://fonts.googleapis.com/css2?family=Slackey&display=swap" rel="stylesheet">
     <style>
         *, body, a, button, select, input {
@@ -144,18 +181,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             object-fit: cover;
         }
         .login-title-container {
-            margin-bottom: 25px;
-        }
-        .login-title-img {
-            height: 45px;
-            object-fit: contain;
-            filter: drop-shadow(0 0 6px rgba(255, 0, 127, 0.5));
+            margin-bottom: 20px;
         }
         .login-form {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 15px;
+            gap: 12px;
         }
         .input-box {
             width: 70%;
@@ -202,10 +234,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             object-fit: cover;
             border-radius: 50%;
         }
-        .eye-toggle-btn:hover {
-            transform: scale(1.1);
-            box-shadow: 0 0 8px rgba(255, 0, 127, 0.8);
-        }
         .login-submit-btn {
             background-color: #ffb6c1;
             color: #000;
@@ -228,84 +256,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-size: 11px;
             text-decoration: underline;
             cursor: pointer;
-            margin-top: 2px;
-            transition: color 0.2s;
+            margin-top: 5px;
+            display: inline-block;
         }
         .forgot-link:hover {
             color: #ff007f;
-        }
-        .separator {
-            color: #ffb6c1;
-            font-size: 12px;
-            margin: 10px 0 5px 0;
-        }
-        .social-container {
-            display: flex;
-            justify-content: center;
-            gap: 25px;
-            margin-top: 10px;
-        }
-        .social-box {
-            width: 45px;
-            height: 45px;
-            border-radius: 12px;
-            overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            box-shadow: 0 0 10px rgba(255, 182, 193, 0.5);
-            transition: transform 0.2s;
-        }
-        .social-box img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .social-box:hover {
-            transform: scale(1.08);
-        }
-        .bottom-bar {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 56px;
-            background: rgba(255, 182, 193, 0.95);
-            backdrop-filter: blur(6px);
-            border-top: 3px solid #ff007f;
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            z-index: 99;
-            box-sizing: border-box;
-            padding: 0 10px;
-        }
-        .nav-item {
-            background: transparent;
-            border: none;
-            padding: 2px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: transform 0.15s ease-in-out;
-            border-radius: 50%;
-            cursor: pointer;
-        }
-        .nav-item img {
-            width: 36px;
-            height: 36px;
-            object-fit: cover;
-            border-radius: 50%;
-            border: 2px solid #ff007f;
-            box-shadow: 0 0 6px rgba(255, 0, 127, 0.4);
-        }
-        .nav-item:hover {
-            transform: scale(1.15) translateY(-2px);
-            filter: drop-shadow(0 0 8px #ff007f);
-        }
-        .nav-item:active {
-            transform: scale(0.95);
         }
         .custom-modal-overlay {
             position: fixed;
@@ -362,12 +317,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             cursor: pointer;
             border-radius: 6px;
             margin-top: 15px;
-            transition: transform 0.1s ease, background-color 0.2s ease;
-        }
-        .custom-modal-btn:hover {
-            background-color: #ff007f;
-            color: #fff;
-            transform: scale(1.05);
         }
     </style>
 </head>
@@ -375,7 +324,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="os-window">
         <div class="os-header">
             <div class="os-title-container">
-                <span class="os-title-text">DEMO</span>
+                <span class="os-title-text"><?php echo ($accion === 'register') ? 'Register' : 'Login'; ?></span>
             </div>
             <div class="os-controls">
                 <div class="os-btn" onclick="minimizeWindow()"><div class="btn-minimize"></div></div>
@@ -388,56 +337,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <img src="img/logo.jfif" alt="User Profile" class="user-avatar-img">
             </div>
             <div class="login-title-container">
-                <img src="img/login-title.jpg" alt="LOG IN" class="login-title-img">
+                <h2 style="color: #ffb6c1; font-size: 18px; margin: 0; text-transform: uppercase;">
+                    <?php echo ($accion === 'register') ? 'Register' : 'Login'; ?>
+                </h2>
             </div>
-            <form class="login-form" id="loginForm" action="login.php" method="POST">
-                <div class="input-box">
-                    <input type="text" name="usuario" id="userInput" placeholder="email ID or Username" class="login-input" required>
-                </div>
-                <div class="input-box">
-                    <input type="password" name="password" id="passwordField" placeholder="password" class="login-input" required>
-                    <button type="button" class="eye-toggle-btn" onclick="togglePassword()">
-                        <img src="img/ojo.jfif" alt="Mostrar contraseña" id="eyeIcon">
-                    </button>
-                </div>
-                <button type="submit" class="login-submit-btn">ENTER</button>
 
-                
-                <span class="forgot-link" onclick="openForgotModal()">¿no te acordas la contraseña?:( que mal</span>
+            <?php if ($accion === 'login'): ?>
+                <form class="login-form" action="login.php" method="POST">
+                    <input type="hidden" name="form_type" value="login">
+                    <div class="input-box">
+                        <input type="text" name="usuario" placeholder="Username" class="login-input" required>
+                    </div>
+                    <div class="input-box">
+                        <input type="password" name="password" id="passwordField" placeholder="Password" class="login-input" required>
+                        <button type="button" class="eye-toggle-btn" onclick="togglePassword('passwordField', 'eyeIcon1')">
+                            <img src="img/ojo.jfif" alt="Mostrar" id="eyeIcon1">
+                        </button>
+                    </div>
+                    <button type="submit" class="login-submit-btn">ENTER</button>
 
-                <?php if (!empty($mensaje)): ?>
-                    <div style="color: #ff3366; font-size: 11px; margin-top: 5px;"><?php echo htmlspecialchars($mensaje); ?></div>
-                <?php endif; ?>
+                    <a href="login.php?action=register" class="forgot-link">¿No tenés cuenta? Registrate acá ✨</a>
+                    <span class="forgot-link" onclick="openForgotModal()">¿no te acordas la contraseña?:( que mal</span>
 
-                <div class="separator">or continue with</div>
-                <div class="social-container">
-                    <div class="social-box" onclick="socialLogin('WhatsApp')"><img src="img/whatsapp.jfif" alt="WhatsApp"></div>
-                    <div class="social-box" onclick="socialLogin('Google')"><img src="img/google.jfif" alt="Google"></div>
-                    <div class="social-box" onclick="socialLogin('Instagram')"><img src="img/instagram.jfif" alt="Instagram"></div>
-                </div>
-            </form>
+                    <?php if (!empty($mensaje)): ?>
+                        <div style="color: #ff3366; font-size: 11px; margin-top: 5px;"><?php echo htmlspecialchars($mensaje); ?></div>
+                    <?php endif; ?>
+                </form>
+            <?php else: ?>
+                <form class="login-form" action="login.php?action=register" method="POST">
+                    <input type="hidden" name="form_type" value="register">
+                    <div class="input-box">
+                        <input type="text" name="usuario" placeholder="Choose a Username" class="login-input" required>
+                    </div>
+                    <div class="input-box">
+                        <input type="password" name="password" id="regPassField" placeholder="Password" class="login-input" required>
+                        <button type="button" class="eye-toggle-btn" onclick="togglePassword('regPassField', 'eyeIcon2')">
+                            <img src="img/ojo.jfif" alt="Mostrar" id="eyeIcon2">
+                        </button>
+                    </div>
+                    <div class="input-box">
+                        <input type="password" name="confirm_password" id="confirmPassField" placeholder="Confirm Password" class="login-input" required>
+                        <button type="button" class="eye-toggle-btn" onclick="togglePassword('confirmPassField', 'eyeIcon3')">
+                            <img src="img/ojo.jfif" alt="Mostrar" id="eyeIcon3">
+                        </button>
+                    </div>
+                    <button type="submit" class="login-submit-btn">REGISTER</button>
+
+                    <a href="login.php" class="forgot-link">¿Ya tenés cuenta? Iniciar Sesión 💖</a>
+
+                    <?php if (!empty($mensaje)): ?>
+                        <div style="color: #ff3366; font-size: 11px; margin-top: 5px;"><?php echo htmlspecialchars($mensaje); ?></div>
+                    <?php endif; ?>
+                </form>
+            <?php endif; ?>
         </div>
     </div>
 
-    <div class="bottom-bar">
-        <button class="nav-item" title="Perfil (Index)" onclick="window.location.href='views/perfil.php'">
-            <img src="img/perfil.jfif" alt="Perfil">
-        </button>
-        <button class="nav-item" title="Match" onclick="window.location.href='views/match.html'">
-            <img src="img/match.jfif" alt="Match">
-        </button>
-        <button class="nav-item" title="Agregar" onclick="window.location.href='views/agregar.html'">
-            <img src="img/simbolomas.jfif" alt="Agregar">
-        </button>
-        <button class="nav-item" title="Mensajes" onclick="window.location.href='views/mensajes.html'">
-            <img src="img/mensajes.jfif" alt="Mensajes">
-        </button>
-        <button class="nav-item" title="Notificaciones" onclick="window.location.href='views/notificaciones.html'">
-            <img src="img/notificaciones.jfif" alt="Notificaciones">
-        </button>
-    </div>
-
-    
     <div class="custom-modal-overlay" id="forgotModal">
         <div class="custom-modal">
             <div class="custom-modal-header">
@@ -450,7 +405,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <span style="color: #ff007f; font-size: 11px;">Ingresá tu correo electrónico para enviarte un link de recuperación:</span>
                 </p>
                 <input type="email" id="recoveryEmailInput" placeholder="tu_email@ejemplo.com" class="login-input" style="width: 100%; font-size: 11px; margin-bottom: 10px;" required>
-                
+               
                 <div style="display: flex; gap: 10px; justify-content: center;">
                     <button class="custom-modal-btn" onclick="closeForgotModal()" style="background: transparent; color: #ffb6c1; border-color: #ffb6c1;">CANCELAR</button>
                     <button class="custom-modal-btn" onclick="sendRecoveryEmail()">ENVIAR LINK ✨</button>
@@ -467,38 +422,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
             <div class="custom-modal-body">
                 <p id="modalMessage">Mensaje aquí</p>
-                <button class="custom-modal-btn" id="modalActionBtn" onclick="closeCustomAlert()">ACEPTAR</button>
+                <button class="custom-modal-btn" onclick="closeCustomAlert()">ACEPTAR</button>
             </div>
         </div>
     </div>
 
     <script>
-        function togglePassword() {
-            const passwordInput = document.getElementById('passwordField');
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-            } else {
-                passwordInput.type = 'password';
-            }
+        function togglePassword(fieldId) {
+            const passwordInput = document.getElementById(fieldId);
+            passwordInput.type = passwordInput.type === 'password' ? 'text' : 'password';
         }
-
         function showCustomAlert(message) {
             document.getElementById('modalMessage').innerText = message;
             document.getElementById('customModal').classList.add('active');
         }
-
         function closeCustomAlert() {
             document.getElementById('customModal').classList.remove('active');
         }
-
         function openForgotModal() {
             document.getElementById('forgotModal').classList.add('active');
         }
-
         function closeForgotModal() {
             document.getElementById('forgotModal').classList.remove('active');
         }
-
         function sendRecoveryEmail() {
             const email = document.getElementById('recoveryEmailInput').value.trim();
             if (email !== '') {
@@ -509,29 +455,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 alert('Por favor, ingresá un correo electrónico válido. <3');
             }
         }
-
-        function socialLogin(provider) {
-            showCustomAlert('Conectando con ' + provider + '...');
-        }
-
         function minimizeWindow() {
-            const windowEl = document.querySelector('.os-window');
-            windowEl.style.transform = 'scale(0)';
-            windowEl.style.transition = 'transform 0.3s ease';
-            setTimeout(() => {
-                showCustomAlert('Ventana minimizada. Recarga la página para restaurarla.');
-            }, 300);
+            showCustomAlert('Ventana minimizada.');
         }
-
         function maximizeWindow() {
-            const windowEl = document.querySelector('.os-window');
-            if (windowEl.style.width === '90vw') {
-                windowEl.style.width = '580px';
-            } else {
-                windowEl.style.width = '90vw';
-            }
+            const win = document.querySelector('.os-window');
+            win.style.width = win.style.width === '90vw' ? '580px' : '90vw';
         }
-
         function closeWindow() {
             showCustomAlert('Acción no permitida en esta DEMO');
         }

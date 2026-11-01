@@ -14,7 +14,12 @@ try {
 
 $mensaje_exito = "";
 
-// GESTIÓN DE ELIMINAR CUENTA
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['accion'] === 'cerrar_sesion') {
+    session_destroy();
+    header("Location: ../login.php");
+    exit();
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['accion'] === 'eliminar_cuenta' && $pdo) {
     try {
         $stmt = $pdo->prepare("DELETE FROM usuarios WHERE id = 1");
@@ -27,14 +32,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion']) && $_POST['
     }
 }
 
-// GESTIÓN DEL FORMULARIO POST (GUARDAR CAMBIOS Y/O FOTO)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pdo && !isset($_POST['accion'])) {
     $nuevo_nombre = $_POST['nombre'] ?? '';
     $nueva_edad = $_POST['edad'] ?? '';
     $nuevo_bio = $_POST['bio'] ?? '';
     $nuevo_mood = $_POST['mood'] ?? '';
 
-    // Manejo del archivo subido (Avatar)
     if (isset($_FILES['avatar_file']) && $_FILES['avatar_file']['error'] === UPLOAD_ERR_OK) {
         $fileTmpPath = $_FILES['avatar_file']['tmp_name'];
         $fileName = $_FILES['avatar_file']['name'];
@@ -62,11 +65,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pdo && !isset($_POST['accion'])) {
     }
 }
 
-// OBTENER DATOS DE LA BD
 $usuario = [
-    'nombre' => 'Angel', 
-    'edad' => 17, 
-    'bio' => 'I love: ME', 
+    'nombre' => 'Angel',
+    'edad' => 17,
+    'bio' => 'I love: ME',
     'mood' => 'divaa <3',
     'avatar' => '../img/perfil.jfif'
 ];
@@ -86,7 +88,6 @@ if ($pdo) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cyber Angel - Perfil</title>
     <link rel="icon" type="image/png" href="../img/logo.png">
-
     <link href="https://fonts.googleapis.com/css2?family=Slackey&display=swap" rel="stylesheet">
     <style>
         *, body, a, button, select, input, textarea {
@@ -148,8 +149,10 @@ if ($pdo) {
             margin: 0;
             padding: 0;
             background-image: url('../img/fondo.jfif');
-            background-repeat: repeat;
-            background-size: 600px auto;
+            background-repeat: no-repeat;
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
             font-family: 'Comic Sans MS', 'Courier New', sans-serif;
             color: #ffffff;
             display: flex;
@@ -247,7 +250,7 @@ if ($pdo) {
 
         .profile-img-wrap { position: relative; width: 100%; }
         .profile-img { width: 100%; height: 250px; object-fit: cover; border: 2px solid #ff007f; display: block; }
-        
+       
         .change-avatar-btn {
             position: absolute;
             top: 8px;
@@ -375,18 +378,28 @@ if ($pdo) {
 
         .form-edit button:hover { background: #ff66b2; }
 
+        .logout-btn {
+            background: #4a154b !important;
+            border: 1px solid #ff66b2 !important;
+            color: #ffb6c1 !important;
+            margin-top: 6px;
+        }
+        .logout-btn:hover {
+            background: #ff66b2 !important;
+            color: #000 !important;
+        }
+
         .delete-account-btn {
             background: #330011 !important;
             border: 1px dashed #ff3366 !important;
             color: #ff80aa !important;
-            margin-top: 8px;
+            margin-top: 6px;
         }
         .delete-account-btn:hover {
             background: #ff3366 !important;
             color: #fff !important;
         }
 
-        /* MODAL RETRO DE ELIMINAR CUENTA */
         .custom-modal-overlay {
             position: fixed;
             top: 0; left: 0;
@@ -483,10 +496,10 @@ if ($pdo) {
 
     <div class="main-container">
         <div class="profile-layout">
-            
+           
             <div class="col-left">
                 <div style="font-size: 13px; color: #ff66b2; font-weight: bold; text-shadow: 0 0 5px #ff007f;">@angels4cyberlife_</div>
-                
+               
                 <div class="box-card" style="padding: 6px;">
                     <div class="profile-img-wrap">
                         <button type="button" class="change-avatar-btn" onclick="document.getElementById('avatar_file_input').click();">📷 cambiar foto</button>
@@ -523,7 +536,7 @@ if ($pdo) {
                     <span class="friend-name">maiite</span>
                 </div>
             </div>
-            
+           
             <div class="col-right">
                 <div class="header-tag" style="text-align: center;">
                     EDITAR PERFIL
@@ -531,7 +544,7 @@ if ($pdo) {
 
                 <div class="box-card form-edit" style="font-size: 12px; line-height: 1.4;">
                     <div style="color: #ff007f; font-family: 'Slackey', cursive; font-size: 11px; margin-bottom: 6px;">Angel's blogg!! &lt;3</div>
-                    
+                   
                     <?php if(!empty($mensaje_exito)): ?>
                         <div style="background: #ff007f; color: #fff; padding: 4px; font-size: 10px; text-align: center; margin-bottom: 6px;"><?php echo $mensaje_exito; ?></div>
                     <?php endif; ?>
@@ -555,7 +568,11 @@ if ($pdo) {
                         <button type="submit">GUARDAR CAMBIOS</button>
                     </form>
 
-                    <!-- BOTÓN ELIMINAR CUENTA -->
+                    <form action="perfil.php" method="POST">
+                        <input type="hidden" name="accion" value="cerrar_sesion">
+                        <button type="submit" class="logout-btn">CERRAR SESIÓN 🚪</button>
+                    </form>
+
                     <button type="button" class="delete-account-btn" onclick="openDeleteModal()">ELIMINAR CUENTA 💔</button>
                 </div>
 
@@ -583,7 +600,7 @@ if ($pdo) {
                                 </div>
                             </div>
                         </div>
-                        
+                       
                         <div style="display: flex; flex-direction: column; gap: 4px;">
                             <div onclick="changeTrack('kIDWG7Xar4E', 'Genie in a Bottle', 'Christina Aguilera', '../img/cancion.jfif')" style="display: flex; align-items: center; gap: 8px; background: rgba(255,0,127,0.15); border: 1px solid #ff007f; padding: 4px; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='rgba(255,0,127,0.4)'" onmouseout="this.style.background='rgba(255,0,127,0.15)'">
                                 <img src="../img/cancion.jfif" style="width: 32px; height: 32px; object-fit: cover; border: 1px solid #ff007f;" alt="1">
@@ -628,8 +645,7 @@ if ($pdo) {
 
         </div>
     </div>
-    
-    <!-- MODAL DE CONFIRMACIÓN PARA BORRAR CUENTA -->
+   
     <div class="custom-modal-overlay" id="deleteModal">
         <div class="custom-modal">
             <div class="custom-modal-header">
@@ -652,7 +668,7 @@ if ($pdo) {
     <div class="youtube-hidden">
         <div id="player"></div>
     </div>
-    
+   
     <div class="bottom-nav">
         <button class="nav-btn" id="profile-btn" title="Perfil">
             <img src="../img/perfil.jfif" alt="Perfil">
