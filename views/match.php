@@ -16,9 +16,15 @@ try {
 
 if (empty($perfiles)) {
     $perfiles = [
-        ['id' => 1, 'nombre' => 'Alex', 'imagen' => '../img/matchperfil.jpg'],
-        ['id' => 2, 'nombre' => 'Valentina', 'imagen' => '../img/perfil.jfif'],
-        ['id' => 3, 'nombre' => 'Dante', 'imagen' => '../img/matchperfil.jpg']
+        ['id' => 1, 'nombre' => 'Kamila', 'imagen' => '../img/kamila.jpg'],
+        ['id' => 2, 'nombre' => 'Nahi', 'imagen' => '../img/nahi.jpg'],
+        ['id' => 3, 'nombre' => 'May', 'imagen' => '../img/may.jpg'],
+        ['id' => 4, 'nombre' => 'Martin', 'imagen' => '../img/martin.jpg'],
+        ['id' => 5, 'nombre' => 'Jhonatan', 'imagen' => '../img/jhonatan.jpg'],
+        ['id' => 6, 'nombre' => 'Enrique', 'imagen' => '../img/enrique.jpg'],
+        ['id' => 7, 'nombre' => 'Rosi', 'imagen' => '../img/rosi.jpg'],
+        ['id' => 8, 'nombre' => 'Miriam', 'imagen' => '../img/miriam.jpg'],
+        ['id' => 9, 'nombre' => 'Matias', 'imagen' => '../img/matias.jpg']
     ];
 }
 ?>
@@ -551,7 +557,10 @@ if (empty($perfiles)) {
 
             <div class="deck-container" id="card-deck">
                 <?php foreach ($perfiles as $index => $p): ?>
-                    <div class="profile-card" style="background-image: url('<?php echo htmlspecialchars($p['imagen']); ?>'); z-index: <?php echo count($perfiles) - $index; ?>; transform: rotate(<?php echo ($index * 3) - 3; ?>deg) translate(<?php echo $index * 5; ?>px, <?php echo $index * 4; ?>px); filter: brightness(<?php echo 1 - ($index * 0.2); ?>);"></div>
+                    <div class="profile-card" 
+                         data-id="<?php echo htmlspecialchars($p['id']); ?>" 
+                         data-nombre="<?php echo htmlspecialchars($p['nombre']); ?>" 
+                         style="background-image: url('<?php echo htmlspecialchars($p['imagen']); ?>'); z-index: <?php echo count($perfiles) - $index; ?>; transform: rotate(<?php echo ($index * 3) - 3; ?>deg) translate(<?php echo $index * 5; ?>px, <?php echo $index * 4; ?>px); filter: brightness(<?php echo 1 - ($index * 0.2); ?>);"></div>
                 <?php endforeach; ?>
             </div>
 
@@ -595,7 +604,7 @@ if (empty($perfiles)) {
                         </svg>
                     </div>
 
-                    <div class="avatar-circle" style="background-image: url('../img/matchperfil.jpg');"></div>
+                    <div class="avatar-circle" id="matchedAvatar" style="background-image: url('');"></div>
                 </div>
 
                 <p class="match-subtitle">"Agregado a tus Top Friends ♫"</p>
@@ -603,7 +612,8 @@ if (empty($perfiles)) {
                     <input type="text" class="match-chat-input" readonly value="¡Hola! Me encantó tu perfil :3">
                     <div class="match-buttons-row">
                         <button class="y2k-btn" onclick="sendGreeting()">Enviar Mensaje</button>
-                        <button class="y2k-btn secondary" onclick="window.location.href='perfil.php'">Ver Perfil</button>
+                        <!-- CORREGIDO: Ahora redirige al perfil del usuario con el que se hizo match -->
+                        <button class="y2k-btn secondary" onclick="viewMatchedProfile()">Ver Perfil</button>
                     </div>
                 </div>
             </div>
@@ -630,6 +640,8 @@ if (empty($perfiles)) {
     </div>
 
     <script>
+        let currentMatchedId = null;
+
         function handleMatch(type) {
             const deck = document.getElementById('card-deck');
             const topCard = deck.querySelector('.profile-card');
@@ -642,6 +654,10 @@ if (empty($perfiles)) {
             const soundNoMatch = document.getElementById('soundNoMatch');
             
             if (topCard) {
+                // Guardamos el ID del perfil actual antes de animarlo o removerlo
+                currentMatchedId = topCard.getAttribute('data-id');
+                const cardBg = topCard.style.backgroundImage;
+
                 topCard.style.transition = 'transform 0.4s ease, opacity 0.4s ease';
                 
                 if (type === 'match') {
@@ -654,6 +670,9 @@ if (empty($perfiles)) {
                     glow.classList.remove('active');
                     void glow.offsetWidth; 
                     glow.classList.add('active');
+
+                    // Sincronizamos la foto de la tarjeta en el cartel de éxito
+                    document.getElementById('matchedAvatar').style.backgroundImage = cardBg;
 
                     setTimeout(() => {
                         matchOverlay.classList.add('active');
@@ -673,6 +692,14 @@ if (empty($perfiles)) {
                         removeCardAndCheck(topCard, counterBadge, deck);
                     }, 1400);
                 }
+            }
+        }
+
+        function viewMatchedProfile() {
+            if (currentMatchedId) {
+                window.location.href = 'perfil.php?id=' + currentMatchedId;
+            } else {
+                window.location.href = 'perfil.php';
             }
         }
 
